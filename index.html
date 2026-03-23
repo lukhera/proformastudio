@@ -11,6 +11,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- BIBLIOTECA PARA DIVIDIR PDF (REMOVIDO O ZIP) -->
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+
     <style>
         :root {
             --cvc-blue: #00205B;
@@ -81,10 +84,21 @@
             transform: translateY(-1px);
             box-shadow: 0 10px 15px -3px rgba(255, 211, 0, 0.3);
         }
+
+        .btn-green {
+            background-color: #059669;
+            color: white;
+        }
+        .btn-green:hover:not(:disabled) {
+            background-color: #047857;
+            box-shadow: 0 10px 15px -3px rgba(5, 150, 105, 0.3);
+        }
         
         .btn-action:disabled {
             opacity: 0.7;
             cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
         }
 
         .paper-preview-wrapper {
@@ -119,6 +133,8 @@
             -webkit-animation: spin 1s linear infinite;
             animation: spin 1s linear infinite;
         }
+        .spinner-white { border-top: 3px solid #ffffff; }
+
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         /* Estilos de Impressão (Nativa do Navegador) */
@@ -162,47 +178,60 @@
                 <!-- PAINEL DE CONTROLE (ESQUERDA) -->
                 <div class="lg:col-span-4 flex flex-col gap-6">
                     
+                    <!-- BLOCO 1: IMPORTAÇÃO DE LOTE -->
                     <div class="studio-panel p-6">
                         <h2 class="text-2xl font-bold text-[#00205B] mb-2">Importação de Lote</h2>
                         <p class="text-sm text-gray-500 mb-6">Cole os dados brutos diretamente do portal. O sistema extrai automaticamente as informações.</p>
                         
-                        <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6 flex gap-3">
-                            <i data-lucide="info" class="w-5 h-5 text-blue-600 shrink-0"></i>
-                            <div class="text-sm text-blue-800">
-                                <strong>Extrator Inteligente (Regex):</strong><br>
-                                <span class="text-xs opacity-80">Localiza automaticamente a <strong>Invoice</strong> (ex: VQUF96262626), <strong>Data</strong> e <strong>Valor</strong> (US$). Não se preocupe com a formatação!</span>
-                            </div>
-                        </div>
-
                         <div class="flex items-center justify-between mb-2">
                             <label class="text-xs font-bold text-gray-600 uppercase tracking-wider">Dados do Portal</label>
                             <span id="line-count" class="text-xs font-mono bg-gray-100 text-gray-600 px-2 py-1 rounded">0 faturas</span>
                         </div>
                         
-                        <textarea id="data-input" oninput="handleInput()" placeholder="Exemplo do Portal:&#10;8417994VQUF9626262620/03/2026PENDENTENãoRegularCVC BRASIL1NãoUS$37.299,01" class="data-grid-input custom-scroll h-[250px] mb-6"></textarea>
+                        <textarea id="data-input" oninput="handleInput()" placeholder="Exemplo do Portal:&#10;8417994VQUF9626262620/03/2026PENDENTENãoRegularCVC BRASIL1NãoUS$37.299,01" class="data-grid-input custom-scroll h-[200px] mb-6"></textarea>
 
-                        <button id="btnLote" onclick="baixarLote()" class="btn-action mb-8">
-                            <i data-lucide="download-cloud" class="w-5 h-5 mr-2"></i>
-                            <span>Baixar Todas (Lote)</span>
+                        <button id="btnLote" onclick="imprimirLote()" class="btn-action mb-6">
+                            <i data-lucide="printer" class="w-5 h-5 mr-2"></i>
+                            <span>Imprimir Todas (Lote PDF Único)</span>
                         </button>
 
-                        <!-- NOVA SEÇÃO: DOWNLOADS INDIVIDUAIS -->
+                        <!-- DOWNLOADS INDIVIDUAIS (LISTA) -->
                         <div id="individual-downloads-section" class="hidden">
                             <div class="flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
-                                <i data-lucide="download" class="w-4 h-4 text-gray-400"></i>
-                                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Downloads Individuais</h3>
+                                <i data-lucide="printer" class="w-4 h-4 text-gray-400"></i>
+                                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Impressões Individuais</h3>
                             </div>
                             
-                            <div id="invoice-list" class="max-h-[300px] overflow-y-auto custom-scroll pr-2 space-y-2">
+                            <div id="invoice-list" class="max-h-[200px] overflow-y-auto custom-scroll pr-2 space-y-2">
                                 <!-- Lista de faturas renderizada pelo JS -->
                             </div>
                         </div>
                     </div>
 
-                    <div class="studio-panel p-6 bg-gradient-to-br from-gray-50 to-gray-100 border-none text-center">
-                        <i data-lucide="shield-check" class="w-8 h-8 mx-auto text-emerald-500 mb-3"></i>
-                        <h3 class="text-sm font-bold text-gray-700">Formato Homologado A4</h3>
-                        <p class="text-xs text-gray-500 mt-1">O layout gerado atende exatamente às especificações da Disney Destinations LLC.</p>
+                    <!-- BLOCO 2: SEPARADOR INTELIGENTE DE PDF (SEM ZIP) -->
+                    <div class="studio-panel p-6 border-2 border-dashed border-gray-300 bg-gray-50 relative">
+                        <div class="absolute -top-3 left-4 bg-gray-100 px-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Passo 2 - Opcional</div>
+                        
+                        <h2 class="text-lg font-bold text-[#00205B] mb-2 flex items-center gap-2">
+                            <i data-lucide="scissors" class="w-5 h-5 text-emerald-600"></i> Separador de PDF
+                        </h2>
+                        <p class="text-xs text-gray-500 mb-4">Já baixou o Lote acima? Anexe esse arquivo PDF aqui. Vamos fatiá-lo por fatura e <strong>baixar os PDFs automaticamente um por um</strong> para o seu computador.</p>
+                        
+                        <div class="relative w-full mb-5 group">
+                            <input type="file" id="pdf-upload" accept="application/pdf" onchange="atualizarNomeArquivo(this)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"/>
+                            <div id="upload-box" class="border-2 border-dashed border-emerald-300 bg-white rounded-lg p-6 flex flex-col items-center justify-center text-center transition-all group-hover:border-emerald-500 group-hover:bg-emerald-50">
+                                <div id="upload-icon-wrapper" class="bg-emerald-100 p-3 rounded-full mb-3 transition-colors">
+                                    <i data-lucide="upload-cloud" id="upload-icon" class="w-6 h-6 text-emerald-700"></i>
+                                </div>
+                                <p class="text-sm font-bold text-[#00205B]">Clique para anexar o PDF do Lote</p>
+                                <p id="file-name-display" class="text-xs text-gray-400 mt-1">Nenhum arquivo selecionado</p>
+                            </div>
+                        </div>
+                        
+                        <button id="btnSeparar" onclick="separarPDF()" class="btn-action btn-green w-full" style="padding: 12px; font-size: 13px;">
+                            <i data-lucide="copy" class="w-4 h-4 mr-2"></i> 
+                            <span>Fatiar PDF e Baixar Separados</span>
+                        </button>
                     </div>
 
                 </div>
@@ -290,8 +319,8 @@
                             <p class="text-xs text-gray-500">${item.data} &bull; US$ ${item.valor}</p>
                         </div>
                     </div>
-                    <button onclick="baixarIndividual('${item.invoice}', '${item.data}', '${item.valor}')" class="p-2 text-[#00205B] hover:bg-gray-100 rounded-md transition-colors border border-transparent hover:border-gray-200" title="Baixar PDF">
-                        <i data-lucide="download" class="w-4 h-4"></i>
+                    <button onclick="imprimirIndividual('${item.invoice}', '${item.data}', '${item.valor}')" class="p-2 text-[#00205B] hover:bg-gray-100 rounded-md transition-colors border border-transparent hover:border-gray-200" title="Imprimir PDF">
+                        <i data-lucide="printer" class="w-4 h-4"></i>
                     </button>
                 </div>
                 `;
@@ -303,8 +332,42 @@
 
         function limparDados() {
             document.getElementById('data-input').value = '';
+            document.getElementById('pdf-upload').value = '';
+            
+            // Reseta a UI visual do Separador de PDF
+            atualizarNomeArquivo(document.getElementById('pdf-upload'));
+
             handleInput();
             showToast('Painel de dados limpo.', 'info');
+        }
+
+        // Função para atualizar a nova interface interativa de Upload de Arquivo
+        function atualizarNomeArquivo(input) {
+            const display = document.getElementById('file-name-display');
+            const box = document.getElementById('upload-box');
+            const iconWrapper = document.getElementById('upload-icon-wrapper');
+            const icon = document.getElementById('upload-icon');
+
+            if (input.files && input.files.length > 0) {
+                display.textContent = input.files[0].name;
+                display.classList.remove('text-gray-400');
+                display.classList.add('text-emerald-700', 'font-bold');
+                box.classList.add('border-emerald-500', 'bg-emerald-50');
+                box.classList.remove('border-emerald-300', 'bg-white');
+                icon.setAttribute('data-lucide', 'file-check-2');
+                iconWrapper.classList.remove('bg-emerald-100');
+                iconWrapper.classList.add('bg-emerald-200');
+            } else {
+                display.textContent = 'Nenhum arquivo selecionado';
+                display.classList.remove('text-emerald-700', 'font-bold');
+                display.classList.add('text-gray-400');
+                box.classList.remove('border-emerald-500', 'bg-emerald-50');
+                box.classList.add('border-emerald-300', 'bg-white');
+                icon.setAttribute('data-lucide', 'upload-cloud');
+                iconWrapper.classList.remove('bg-emerald-200');
+                iconWrapper.classList.add('bg-emerald-100');
+            }
+            lucide.createIcons();
         }
 
         function showToast(message, type = 'success', persistent = false) {
@@ -317,7 +380,7 @@
             div.className = `${bgClass} text-white px-6 py-4 rounded-lg shadow-xl flex items-center gap-3 transition-all duration-300 transform translate-y-4 opacity-0`;
             
             if (type === 'loading') {
-                div.innerHTML = `<div class="spinner"></div> <span class="font-medium text-sm">${message}</span>`;
+                div.innerHTML = `<div class="spinner spinner-white"></div> <span class="font-medium text-sm">${message}</span>`;
             } else {
                 let icon = type === 'success' ? 'check-circle-2' : (type === 'error' ? 'x-circle' : 'info');
                 div.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 ${iconColor}"></i> <span class="font-medium text-sm">${message}</span>`;
@@ -434,16 +497,17 @@
             document.getElementById('preview-area').innerHTML = getTemplateHTML(invoice, dataInvoice, valorStr);
         }
 
-        /**
-         * Dispara a ação de download/impressão de uma única fatura através do navegador.
-         */
-        function baixarIndividual(invoice, dataInvoice, valorStr) {
+        /* -------------------------------------------------------------
+           MÉTODOS: DOWNLOADS NATIVOS DO NAVEGADOR (VIA IMPRESSÃO)
+           ------------------------------------------------------------- */
+
+        function imprimirIndividual(invoice, dataInvoice, valorStr) {
             const originalTitle = document.title;
             document.title = `Proforma_${invoice}`; 
             
             document.getElementById('print-area').innerHTML = getTemplateHTML(invoice, dataInvoice, valorStr);
             
-            showToast(`Preparando arquivo ${invoice}...`, 'info');
+            showToast(`Preparando impressão de ${invoice}...`, 'info');
 
             setTimeout(() => {
                 window.print();
@@ -451,10 +515,7 @@
             }, 300);
         }
 
-        /**
-         * Dispara a ação de download/impressão em lote através do navegador.
-         */
-        function baixarLote() {
+        function imprimirLote() {
             const dataText = document.getElementById('data-input').value.trim();
             if (!dataText) {
                 showToast("Cole os dados no painel antes de gerar.", "error");
@@ -484,6 +545,96 @@
                 window.print();
                 setTimeout(() => { document.title = originalTitle; }, 1000);
             }, 300);
+        }
+
+        /* -------------------------------------------------------------
+           MÉTODO: SEPARAR PDF E DESCARREGAR ARQUIVOS INDIVIDUALMENTE (SEM ZIP)
+           ------------------------------------------------------------- */
+        async function separarPDF() {
+            const fileInput = document.getElementById('pdf-upload');
+            const dataText = document.getElementById('data-input').value;
+            const extractions = extractData(dataText);
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showToast("Por favor, selecione o arquivo PDF do Lote primeiro.", "error");
+                return;
+            }
+
+            if (extractions.length === 0) {
+                showToast("Cole os dados no painel acima para dar nome aos PDFs.", "error");
+                return;
+            }
+
+            const btn = document.getElementById('btnSeparar');
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = `<div class="spinner spinner-white mr-2"></div><span>Separando PDFs...</span>`;
+            btn.disabled = true;
+
+            let toast = showToast("Fatiando o PDF. Aguarde a transferência dos ficheiros...", "loading", true);
+
+            try {
+                const file = fileInput.files[0];
+                const arrayBuffer = await file.arrayBuffer();
+
+                // Carrega a biblioteca PDF-lib
+                const { PDFDocument } = window.PDFLib;
+                const pdfDoc = await PDFDocument.load(arrayBuffer);
+                const pageCount = pdfDoc.getPageCount();
+                
+                let processados = 0;
+
+                // Loop para fatiar e baixar um a um (o browser vai pedir permissão para "vários ficheiros")
+                for (let i = 0; i < pageCount; i++) {
+                    if (i >= extractions.length) break; 
+
+                    const invoice = extractions[i].invoice;
+
+                    // Cria um novo PDF com apenas 1 página
+                    const newPdf = await PDFDocument.create();
+                    const [copiedPage] = await newPdf.copyPages(pdfDoc, [i]);
+                    newPdf.addPage(copiedPage);
+
+                    const pdfBytes = await newPdf.save();
+                    
+                    // Converte para Blob
+                    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+                    const url = URL.createObjectURL(blob);
+                    
+                    // Força o download
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `Proforma_${invoice}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+
+                    processados++;
+                    
+                    // Pequena pausa (500ms) entre os downloads para o navegador não bloquear
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+
+                if(processados < extractions.length) {
+                    showToast(`Atenção: Apenas ${processados} faturas processadas. O PDF tem menos páginas que a sua lista.`, "info");
+                }
+
+                toast.remove();
+                showToast("Todos os PDFs foram descarregados separadamente!", "success");
+
+                // Limpa o input e a UI visual do upload
+                fileInput.value = '';
+                atualizarNomeArquivo(fileInput);
+
+            } catch (error) {
+                console.error(error);
+                toast.remove();
+                showToast("Erro ao processar o PDF. O arquivo pode estar corrompido.", "error");
+            } finally {
+                btn.innerHTML = txtOriginal;
+                btn.disabled = false;
+                lucide.createIcons();
+            }
         }
     </script>
 </body>
