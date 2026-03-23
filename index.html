@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proforma Studio | CVC Disney</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --cvc-blue: #00205B;
+            --cvc-yellow: #FFD300; 
+            --workspace-bg: #F4F5F7;
+            --panel-border: #E5E7EB;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--workspace-bg);
+            color: #1F2937;
+        }
+
+        .app-header {
+            background-color: var(--cvc-blue);
+            color: white;
+            border-bottom: 4px solid var(--cvc-yellow);
+        }
+
+        .studio-panel {
+            background: #ffffff;
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        .data-grid-input {
+            width: 100%;
+            background: #FAFAFA;
+            border: 1px solid #D1D5DB;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #374151;
+            transition: all 0.2s;
+            resize: vertical;
+        }
+        
+        .data-grid-input:focus {
+            background: #FFFFFF;
+            border-color: var(--cvc-blue);
+            box-shadow: 0 0 0 3px rgba(0, 32, 91, 0.1);
+            outline: none;
+        }
+
+        .btn-action {
+            background-color: var(--cvc-yellow);
+            color: var(--cvc-blue);
+            font-weight: 700;
+            padding: 16px 32px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 14px;
+        }
+
+        .btn-action:hover:not(:disabled) {
+            background-color: #FACC15;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(255, 211, 0, 0.3);
+        }
+        
+        .btn-action:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .paper-preview-wrapper {
+            background-color: #E5E7EB;
+            border-radius: 12px;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            overflow-y: auto;
+            border: 1px inset rgba(0,0,0,0.1);
+        }
+
+        .a4-sheet {
+            background: white;
+            width: 100%;
+            max-width: 800px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 1px solid #ccc;
+        }
+
+        .custom-scroll::-webkit-scrollbar { width: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid #00205B;
+            width: 20px;
+            height: 20px;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Estilos de Impressão (Nativa do Navegador) */
+        #print-area { display: none; }
+        
+        @media print {
+            body { background: #fff; padding: 0; }
+            .ui-layer { display: none !important; }
+            #print-area { display: block !important; }
+            .proforma-page { page-break-after: always; padding: 2cm; }
+            .proforma-page:last-child { page-break-after: auto; }
+            @page { margin: 0; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <div class="ui-layer flex flex-col flex-grow">
+        
+        <!-- HEADER CORPORATIVO -->
+        <header class="app-header py-4 px-8 sticky top-0 z-50 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+                    <i data-lucide="layout-template" class="w-6 h-6 text-[#FFD300]"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">Proforma Studio</h1>
+                    <p class="text-[10px] text-gray-300 font-medium tracking-widest uppercase">Disney Destinations</p>
+                </div>
+            </div>
+            
+            <button onclick="limparDados()" class="text-sm font-semibold text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i> Limpar Painel
+            </button>
+        </header>
+
+        <!-- WORKSPACE -->
+        <main class="flex-grow max-w-[1600px] mx-auto w-full px-6 py-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
+                
+                <!-- PAINEL DE CONTROLE (ESQUERDA) -->
+                <div class="lg:col-span-4 flex flex-col gap-6">
+                    
+                    <div class="studio-panel p-6">
+                        <h2 class="text-2xl font-bold text-[#00205B] mb-2">Importação de Lote</h2>
+                        <p class="text-sm text-gray-500 mb-6">Cole os dados brutos diretamente do portal. O sistema extrai automaticamente as informações.</p>
+                        
+                        <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6 flex gap-3">
+                            <i data-lucide="info" class="w-5 h-5 text-blue-600 shrink-0"></i>
+                            <div class="text-sm text-blue-800">
+                                <strong>Extrator Inteligente (Regex):</strong><br>
+                                <span class="text-xs opacity-80">Localiza automaticamente a <strong>Invoice</strong> (ex: VQUF96262626), <strong>Data</strong> e <strong>Valor</strong> (US$). Não se preocupe com a formatação!</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="text-xs font-bold text-gray-600 uppercase tracking-wider">Dados do Portal</label>
+                            <span id="line-count" class="text-xs font-mono bg-gray-100 text-gray-600 px-2 py-1 rounded">0 faturas</span>
+                        </div>
+                        
+                        <textarea id="data-input" oninput="handleInput()" placeholder="Exemplo do Portal:&#10;8417994VQUF9626262620/03/2026PENDENTENãoRegularCVC BRASIL1NãoUS$37.299,01" class="data-grid-input custom-scroll h-[250px] mb-6"></textarea>
+
+                        <button id="btnLote" onclick="baixarLote()" class="btn-action mb-8">
+                            <i data-lucide="download-cloud" class="w-5 h-5 mr-2"></i>
+                            <span>Baixar Todas (Lote)</span>
+                        </button>
+
+                        <!-- NOVA SEÇÃO: DOWNLOADS INDIVIDUAIS -->
+                        <div id="individual-downloads-section" class="hidden">
+                            <div class="flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
+                                <i data-lucide="download" class="w-4 h-4 text-gray-400"></i>
+                                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Downloads Individuais</h3>
+                            </div>
+                            
+                            <div id="invoice-list" class="max-h-[300px] overflow-y-auto custom-scroll pr-2 space-y-2">
+                                <!-- Lista de faturas renderizada pelo JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="studio-panel p-6 bg-gradient-to-br from-gray-50 to-gray-100 border-none text-center">
+                        <i data-lucide="shield-check" class="w-8 h-8 mx-auto text-emerald-500 mb-3"></i>
+                        <h3 class="text-sm font-bold text-gray-700">Formato Homologado A4</h3>
+                        <p class="text-xs text-gray-500 mt-1">O layout gerado atende exatamente às especificações da Disney Destinations LLC.</p>
+                    </div>
+
+                </div>
+
+                <!-- PAINEL DE PREVIEW (DIREITA) -->
+                <div class="lg:col-span-8 flex flex-col h-full">
+                    
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <h2 class="text-sm font-bold text-gray-600 uppercase tracking-widest flex items-center gap-2">
+                            <i data-lucide="eye" class="w-4 h-4"></i> Live Preview 
+                            <span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full ml-2">A4 Render</span>
+                        </h2>
+                        <span class="text-xs text-gray-400 font-medium">Exibindo 1ª Fatura da Fila</span>
+                    </div>
+
+                    <div class="paper-preview-wrapper flex-grow custom-scroll">
+                        <div class="a4-sheet" id="preview-area">
+                            <!-- Template do Preview Injetado Aqui -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- TOAST NOTIFICATIONS -->
+    <div id="toastContainer" class="fixed bottom-8 right-8 z-[100] flex flex-col gap-3 ui-layer"></div>
+
+    <!-- ÁREA OCULTA PARA IMPRESSÃO EM LOTE -->
+    <div id="print-area"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            handleInput(); 
+        });
+
+        function extractData(text) {
+            const regex = /([A-Za-z]{4}\d{8}).*?(\d{2}\/\d{2}\/\d{4}).*?US\$\s*([\d\.,]+)/g;
+            const results = [];
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                results.push({
+                    invoice: match[1].toUpperCase(),
+                    data: match[2],
+                    valor: match[3]
+                });
+            }
+            return results;
+        }
+
+        function handleInput() {
+            const dataText = document.getElementById('data-input').value;
+            const extractions = extractData(dataText);
+            const count = extractions.length;
+            document.getElementById('line-count').innerText = `${count} fatura${count !== 1 ? 's' : ''}`;
+            
+            atualizarPreview(extractions);
+            renderizarListaIndividual(extractions);
+        }
+
+        function renderizarListaIndividual(extractions) {
+            const container = document.getElementById('individual-downloads-section');
+            const list = document.getElementById('invoice-list');
+            
+            if (extractions.length === 0) {
+                container.classList.add('hidden');
+                list.innerHTML = '';
+                return;
+            }
+            
+            container.classList.remove('hidden');
+            let html = '';
+            
+            extractions.forEach((item, index) => {
+                html += `
+                <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-[#FFD300] transition-colors">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded bg-blue-50 flex items-center justify-center text-[#00205B] font-bold text-xs shrink-0">
+                            ${index + 1}
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-[#00205B] font-mono">${item.invoice}</p>
+                            <p class="text-xs text-gray-500">${item.data} &bull; US$ ${item.valor}</p>
+                        </div>
+                    </div>
+                    <button onclick="baixarIndividual('${item.invoice}', '${item.data}', '${item.valor}')" class="p-2 text-[#00205B] hover:bg-gray-100 rounded-md transition-colors border border-transparent hover:border-gray-200" title="Baixar PDF">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                `;
+            });
+            
+            list.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function limparDados() {
+            document.getElementById('data-input').value = '';
+            handleInput();
+            showToast('Painel de dados limpo.', 'info');
+        }
+
+        function showToast(message, type = 'success', persistent = false) {
+            const container = document.getElementById('toastContainer');
+            const div = document.createElement('div');
+            
+            let bgClass = type === 'success' ? 'bg-[#00205B]' : (type === 'error' ? 'bg-red-600' : 'bg-gray-800');
+            let iconColor = type === 'success' ? 'text-[#FFD300]' : 'text-blue-400';
+            
+            div.className = `${bgClass} text-white px-6 py-4 rounded-lg shadow-xl flex items-center gap-3 transition-all duration-300 transform translate-y-4 opacity-0`;
+            
+            if (type === 'loading') {
+                div.innerHTML = `<div class="spinner"></div> <span class="font-medium text-sm">${message}</span>`;
+            } else {
+                let icon = type === 'success' ? 'check-circle-2' : (type === 'error' ? 'x-circle' : 'info');
+                div.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 ${iconColor}"></i> <span class="font-medium text-sm">${message}</span>`;
+            }
+            
+            container.appendChild(div);
+            lucide.createIcons();
+            
+            requestAnimationFrame(() => div.classList.remove('translate-y-4', 'opacity-0'));
+            
+            if (!persistent) {
+                setTimeout(() => {
+                    div.classList.add('opacity-0', 'translate-y-2');
+                    setTimeout(() => div.remove(), 300);
+                }, 3000);
+            }
+            return div; 
+        }
+
+        /**
+         * Template HTML com layout para impressão via browser
+         */
+        function getTemplateHTML(invoice, dataInvoice, valorStr) {
+            return `
+            <div class="proforma-page" style="background: #fff; color: #000; font-family: Arial, sans-serif; line-height: 1.4; padding: 40px 50px;">
+                
+                <!-- CABEÇALHO -->
+                <div style="margin-bottom: 30px; display: flex; flex-direction: column;">
+                    <div style="margin-bottom: 15px;">
+                        <img src="https://www.talaviation.com/Talaviation/UploadFiles/pgallery/2023121211503079_Big.png" alt="Disney Destinations" style="height: 100px;">
+                    </div>
+                    
+                    <div style="font-size: 11px; text-align: left; padding-left: 5px;">
+                        <p style="margin: 2px 0;"><strong>DISNEY DESTINATIONS ON-LINE* / DISNEY DESTINATIONS LLC</strong></p>
+                        <p style="margin: 2px 0;">Business Operations | EC/WC Wholesale Ticketing Operations</p>
+                        <p style="margin: 2px 0;">200 Celebration Place | 8th floor 8286 | Celebration, FL 34747</p>
+                    </div>
+                </div>
+
+                <div style="text-align: center; font-size: 16px; font-weight: bold; margin: 40px 0; text-decoration: underline;">
+                    STATEMENT OF ACCOUNT
+                </div>
+
+                <div style="margin-left: 80px; font-size: 14px; margin-bottom: 40px; line-height: 1.8;">
+                    <p style="margin: 0;">INVOICE: <strong>${invoice}</strong></p>
+                    <p style="margin: 0;">DATE INVOICE: <strong>${dataInvoice}</strong></p>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 40px; font-family: 'Calibri', Arial, sans-serif;">
+                    <tr>
+                        <td style="border: 1px solid #000; padding: 6px 10px; width: 15%;"><strong>Agency:</strong></td>
+                        <td style="border: 1px solid #000; padding: 6px 10px; width: 85%;">CVC BRASIL OPERADORA AGÊNCIA DE VIAGENS SA</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #000; padding: 6px 10px;"><strong>Home:</strong></td>
+                        <td style="border: 1px solid #000; padding: 6px 10px;">Rua Catequese, 227 – 11º andar - CEP: 09090-401</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #000; padding: 6px 10px;"></td>
+                        <td style="border: 1px solid #000; padding: 6px 10px;">CNPJ: 10.760.260/0001-19</td>
+                    </tr>
+                </table>
+
+                <p style="font-size: 14px; font-weight: bold; margin-bottom: 15px; font-family: 'Calibri', Arial, sans-serif;"><u>Description:</u></p>
+                
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 30px; font-family: 'Calibri', Arial, sans-serif;">
+                    <thead>
+                        <tr>
+                            <th style="border: 1px solid #000; padding: 12px; text-align: center; font-weight: bold; width: 75%;">CONCEPT</th>
+                            <th style="border: 1px solid #000; padding: 12px; text-align: center; font-weight: bold; width: 25%;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="border: 1px solid #000; padding: 30px 12px;"><strong>Bookings total</strong></td>
+                            <td style="border: 1px solid #000; padding: 30px 12px; text-align: center;"><strong>${valorStr} USD</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 60px;">
+                    <tr>
+                        <td style="padding: 5px; text-align: right; width: 60%;">TOTAL a pagar</td>
+                        <td style="padding: 5px; width: 40%;"><strong>${valorStr} USD</strong></td>
+                    </tr>
+                </table>
+
+                <div style="font-size: 13px; line-height: 1.6;">
+                    <p style="margin: 0;">Please settle payment of the agreed outstanding amount to:</p>
+                    <p style="margin: 0; margin-top: 20px;">BANK: JP MORGAN CHASE NEW YORK</p>
+                    <p style="margin: 0;">ACCOUNT: 700635654 – SWIFT: CHASUS33</p>
+                    <p style="margin: 0;">DISNEY DESTINATIONS LLC</p>
+                </div>
+            </div>
+            `;
+        }
+
+        function atualizarPreview(extractions) {
+            let invoice = '[COLE AQUI O INVOICE]';
+            let dataInvoice = '[DATA AQUI]';
+            let valorStr = '[VALOR]';
+
+            if (!extractions) {
+                const dataText = document.getElementById('data-input').value;
+                extractions = extractData(dataText);
+            }
+
+            if (extractions && extractions.length > 0) {
+                invoice = extractions[0].invoice;
+                dataInvoice = extractions[0].data;
+                valorStr = extractions[0].valor;
+            }
+            
+            document.getElementById('preview-area').innerHTML = getTemplateHTML(invoice, dataInvoice, valorStr);
+        }
+
+        /**
+         * Dispara a ação de download/impressão de uma única fatura através do navegador.
+         */
+        function baixarIndividual(invoice, dataInvoice, valorStr) {
+            const originalTitle = document.title;
+            document.title = `Proforma_${invoice}`; 
+            
+            document.getElementById('print-area').innerHTML = getTemplateHTML(invoice, dataInvoice, valorStr);
+            
+            showToast(`Preparando arquivo ${invoice}...`, 'info');
+
+            setTimeout(() => {
+                window.print();
+                setTimeout(() => { document.title = originalTitle; }, 1000);
+            }, 300);
+        }
+
+        /**
+         * Dispara a ação de download/impressão em lote através do navegador.
+         */
+        function baixarLote() {
+            const dataText = document.getElementById('data-input').value.trim();
+            if (!dataText) {
+                showToast("Cole os dados no painel antes de gerar.", "error");
+                return;
+            }
+
+            const extractions = extractData(dataText);
+            if (extractions.length === 0) {
+                showToast("Nenhum dado reconhecido. Verifique se contém Invoice, Data e Valor US$.", "error");
+                return;
+            }
+
+            let htmlGerado = '';
+            
+            extractions.forEach(item => {
+                htmlGerado += getTemplateHTML(item.invoice, item.data, item.valor);
+            });
+
+            const originalTitle = document.title;
+            document.title = `Proformas_Lote_${extractions.length}_Faturas`;
+
+            document.getElementById('print-area').innerHTML = htmlGerado;
+            
+            showToast(`Preparando ${extractions.length} documento(s) para download!`);
+
+            setTimeout(() => {
+                window.print();
+                setTimeout(() => { document.title = originalTitle; }, 1000);
+            }, 300);
+        }
+    </script>
+</body>
+</html>
