@@ -183,12 +183,20 @@
                         <h2 class="text-2xl font-bold text-[#00205B] mb-2">Importação de Lote</h2>
                         <p class="text-sm text-gray-500 mb-6">Cole os dados brutos diretamente do portal. O sistema extrai automaticamente as informações.</p>
                         
+                        <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6 flex gap-3">
+                            <i data-lucide="info" class="w-5 h-5 text-blue-600 shrink-0"></i>
+                            <div class="text-sm text-blue-800">
+                                <strong>Extrator Inteligente (Regex):</strong><br>
+                                <span class="text-xs opacity-80">Localiza automaticamente a <strong>Invoice</strong> (seja VQUF96262626 ou 27032026), <strong>Data</strong> e <strong>Valor</strong> (US$). Ignora o Nº CVC inicial e não requer formatação!</span>
+                            </div>
+                        </div>
+
                         <div class="flex items-center justify-between mb-2">
                             <label class="text-xs font-bold text-gray-600 uppercase tracking-wider">Dados do Portal</label>
                             <span id="line-count" class="text-xs font-mono bg-gray-100 text-gray-600 px-2 py-1 rounded">0 faturas</span>
                         </div>
                         
-                        <textarea id="data-input" oninput="handleInput()" placeholder="Exemplo do Portal:&#10;8417994VQUF9626262620/03/2026PENDENTENãoRegularCVC BRASIL1NãoUS$37.299,01" class="data-grid-input custom-scroll h-[200px] mb-6"></textarea>
+                        <textarea id="data-input" oninput="handleInput()" placeholder="Exemplo do Portal:&#10;8429823  27032026  30/03/2026  PENDENTE  Não  Regular  CVC BRASIL  1  Sim  US$  116.238,46" class="data-grid-input custom-scroll h-[200px] mb-6"></textarea>
 
                         <button id="btnLote" onclick="imprimirLote()" class="btn-action mb-6">
                             <i data-lucide="printer" class="w-5 h-5 mr-2"></i>
@@ -271,16 +279,31 @@
         });
 
         function extractData(text) {
-            const regex = /([A-Za-z]{4}\d{8}).*?(\d{2}\/\d{2}\/\d{4}).*?US\$\s*([\d\.,]+)/g;
+            // Tenta o formato do Portal (Ignora o Nº CVC inicial de 6 a 9 dígitos, pega Fatura, Data e US$ Valor)
+            const regexPortal = /(?:\d{6,9})\s*([A-Za-z0-9]+)\s*(\d{2}\/\d{2}\/\d{4}).*?US\$\s*([\d\.,]+)/g;
             const results = [];
             let match;
-            while ((match = regex.exec(text)) !== null) {
+            
+            while ((match = regexPortal.exec(text)) !== null) {
                 results.push({
                     invoice: match[1].toUpperCase(),
                     data: match[2],
                     valor: match[3]
                 });
             }
+
+            // Fallback: se colem o formato clássico limpo "Invoice | Data | Valor" sem Nº CVC
+            if (results.length === 0) {
+                const regexExcel = /^([A-Za-z0-9]+)[\t ;]+(\d{2}\/\d{2}\/\d{4})[\t ;]+([\d\.,]+)/gm;
+                while ((match = regexExcel.exec(text)) !== null) {
+                    results.push({
+                        invoice: match[1].toUpperCase(),
+                        data: match[2],
+                        valor: match[3]
+                    });
+                }
+            }
+            
             return results;
         }
 
